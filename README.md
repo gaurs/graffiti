@@ -31,8 +31,7 @@ The other option is to download the graffiti package from github repository and 
 After the download please follow the following instructions to build and run graffiti on your machine :
 ````
 $ cd /path/to/downloaded/graffiti
-$ mvn clean install
-$ java -cp graffiti-xx.xx.jar io.gaurs.graffiti.Runner /path/to/jar/to/analyse output location /path/to/dot/executable
+$ java -jar graffiti-core-0.0.1.jar /path/to/jar/to/analyse /path/to/output/dir /path/to/dot/executable
 ````
 
 ## Output##
