@@ -3,6 +3,7 @@ package io.gaurs.graffiti.paint;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -12,8 +13,11 @@ import org.pmw.tinylog.Logger;
 import io.gaurs.graffiti.config.RuntimeConfigurator;
 import io.gaurs.graffiti.model.ComplexType;
 import io.gaurs.graffiti.model.ComplexTypeCache;
+import io.gaurs.graffiti.model.ExceptionalScenarios;
 
 public class IndexFileGenerator extends HtmlFileGenerator {
+
+	private static final ExceptionalScenarios exceptionalScenarios = ExceptionalScenarios.getInstance();
 
 	@Override
 	public void paint() {
@@ -41,6 +45,9 @@ public class IndexFileGenerator extends HtmlFileGenerator {
 			// populate classes table
 			populateClassesTable(indexPage);
 
+			// populate exceptions table
+			populateExceptions(indexPage);
+
 			stream.close();
 
 		} catch (IOException exception) {
@@ -48,6 +55,13 @@ public class IndexFileGenerator extends HtmlFileGenerator {
 		}
 
 		writeToFile("index", RuntimeConfigurator.getConfig().getOutputLocation(), indexPage.html());
+	}
+
+	private void populateExceptions(Document indexPage) {
+		Element table = indexPage.getElementById("exceptions");
+		Element tableBody = table.appendElement("tbody");
+
+		exceptionalScenarios.populate(tableBody);
 	}
 
 	private void populateClassesTable(Document indexPage) {
@@ -66,12 +80,12 @@ public class IndexFileGenerator extends HtmlFileGenerator {
 
 		classNameColumn.attr("border", "1");
 		Element link = classNameColumn.appendElement("a");
-		
+
 		String value = complexType.getFullyQualifiedName();
 		value = value.replaceAll("&lt;", "<");
 		value = value.replaceAll("&gt;", ">");
 		value = value.replaceAll("&quot;", "\"");
-		
+
 		// if complex type is generic type; the index page lists the
 		// corresponding entry to 404
 		if (complexType.isGeneric()) {
@@ -79,19 +93,18 @@ public class IndexFileGenerator extends HtmlFileGenerator {
 		} else {
 			link.attr("href", value + ".html");
 		}
-		
+
 		link.text(complexType.getName());
 
 		String fullyQualifiedName = complexType.getFullyQualifiedName();
-		Logger.debug("Populaiting row for : "+ fullyQualifiedName);
-		
-		
-		//Handle classes in default package
-		if(fullyQualifiedName.lastIndexOf(".") < 0){
+		Logger.debug("Populaiting row for : " + fullyQualifiedName);
+
+		// Handle classes in default package
+		if (fullyQualifiedName.lastIndexOf(".") < 0) {
 			packageNameColumn.text("");
-		}else{
+		} else {
 			packageNameColumn.text(fullyQualifiedName.substring(0, fullyQualifiedName.lastIndexOf(".")));
-		}				
+		}
 
 		packageNameColumn.attr("border", "1");
 

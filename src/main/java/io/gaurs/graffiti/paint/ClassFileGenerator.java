@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,9 @@ public class ClassFileGenerator extends HtmlFileGenerator {
 				// set the class name
 				setClassName(classTemplate, className);
 
+				// set package name
+				setPackageName(classTemplate, className);
+
 				// set attributes count
 				setAttributeCount(classTemplate,
 						null != complexType.getAttributes() ? complexType.getAttributes().size() : 0);
@@ -75,6 +80,12 @@ public class ClassFileGenerator extends HtmlFileGenerator {
 		}
 	}
 
+	private void setPackageName(Document classTemplate, String className) {
+		Element packageName = classTemplate.getElementById("packageName");
+		String pkgName = className.lastIndexOf(".") > 0 ? className.substring(0, className.lastIndexOf(".")) : "";
+		packageName.text(pkgName);
+	}
+
 	private void setTitleName(Document classTemplate, String className) {
 		Element title = classTemplate.getElementsByTag("title").first();
 		title.text("Graffiti | " + className);
@@ -99,8 +110,14 @@ public class ClassFileGenerator extends HtmlFileGenerator {
 	private void addMethodRow(Method method, Element tableBody) {
 		Element row = tableBody.appendElement("tr");
 
-		Element column = row.appendElement("td");
-		column.attr("border", "1");
+		Element methodName = row.appendElement("td");
+		Element returnType = row.appendElement("td");
+		Element parameter = row.appendElement("td");
+
+		methodName.attr("border", "1");
+		returnType.attr("border", "1");
+		parameter.attr("border", "1");
+
 		if (Modifier.toString(method.getModifiers()).contains("public")) {
 			row.attr("class", "success");
 		} else if (Modifier.toString(method.getModifiers()).contains("private")) {
@@ -110,11 +127,39 @@ public class ClassFileGenerator extends HtmlFileGenerator {
 		}
 
 		try {
-			column.text(method.toGenericString());
+			methodName.text(method.getName());
+			returnType.text(method.getGenericReturnType().toString().replaceAll("class ", ""));
+			parameter.text(getParameterList(method.getGenericParameterTypes()));
 		} catch (Throwable exception) {
-			//The return type of the parameter can be a class/interface from another jar
-			Logger.error("Exception occurred while loading method " + method.getName() + " of class " + method.getDeclaringClass().getName());
+			// The return type of the parameter can be a class/interface from
+			// another jar
+			Logger.debug("Exception occurred while loading method " + method.getName() + " of class "
+					+ method.getDeclaringClass().getName());
+			methodName.attr("colspan", "3");
+			methodName.attr("align", "center");
+			methodName.attr("class", "text-danger");
+			methodName.html(
+					"Method \"<strong>" + method.getName() + "</strong>\" could not be analysed as the class <strong>"
+							+ exception.getMessage().replaceAll("/", ".") + "</strong> is not present in current jar");
+
+			returnType.remove();
+			parameter.remove();
 		}
+	}
+
+	private String getParameterList(Type[] genericParameterTypes) {
+		if (genericParameterTypes.length > 1) {
+			StringBuilder builder = new StringBuilder();
+			for (Type type : genericParameterTypes) {
+				builder.append(type.getTypeName() + "; ");
+			}
+
+			return builder.toString();
+		} else if (genericParameterTypes.length == 1) {
+			return genericParameterTypes[0].getTypeName();
+		}
+
+		return "";
 	}
 
 	private void addAttributeRow(Entry<String, ComplexType> entry, Element tableBody) {

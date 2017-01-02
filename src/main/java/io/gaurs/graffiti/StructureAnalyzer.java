@@ -17,6 +17,7 @@ import org.pmw.tinylog.Logger;
 import io.gaurs.graffiti.config.RuntimeConfigurator;
 import io.gaurs.graffiti.model.ComplexType;
 import io.gaurs.graffiti.model.ComplexTypeCache;
+import io.gaurs.graffiti.model.ExceptionalScenarios;
 import io.gaurs.graffiti.paint.ClassFileGenerator;
 
 /**
@@ -31,6 +32,8 @@ import io.gaurs.graffiti.paint.ClassFileGenerator;
  * @author gaurs
  */
 public class StructureAnalyzer {
+
+	private static final ExceptionalScenarios exceptionalScenarios = ExceptionalScenarios.getInstance();
 
 	/**
 	 * @param jarFileName
@@ -91,8 +94,23 @@ public class StructureAnalyzer {
 						populateMethodsData(methods, complexType);
 					}
 				} catch (Throwable exception) {
-					Logger.error("Exception occurred while parsing : " + complexType.getFullyQualifiedName());
 					cacheIterator.remove();
+					if (exception.getCause() instanceof ClassNotFoundException) {
+						Logger.debug(
+								"Exception type 1 occurred while parsing : " + complexType.getFullyQualifiedName());
+
+						String exceptionalClassName = exception.getMessage();
+						exceptionalClassName = exceptionalClassName.replaceAll("/", ".");
+
+						exceptionalScenarios.createException(complexType.getName(),
+								getPackageName(complexType.getFullyQualifiedName()),
+								"The class " + exceptionalClassName
+										+ " in the hierarchy is outside the current jar");
+					} else {
+						Logger.debug(
+								"Exception type 2 occurred while parsing : " + complexType.getFullyQualifiedName());
+					}
+
 					continue;
 				}
 			}
@@ -102,6 +120,11 @@ public class StructureAnalyzer {
 			Logger.error("Exception occurred while loading the classes from the jar file", exception);
 		}
 
+	}
+
+	private String getPackageName(String fullyQualifiedName) {
+		return fullyQualifiedName.lastIndexOf(".") > 0
+				? fullyQualifiedName.substring(0, fullyQualifiedName.lastIndexOf(".")) : "";
 	}
 
 	/**
